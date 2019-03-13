@@ -1,0 +1,154 @@
+C51 COMPILER V7.06   MAIN                                                                  09/12/2013 20:33:54 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\obj\main.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND PRINT(.\obj\main.lst) OBJECT(.\obj\main.ob
+                    -j)
+
+stmt level    source
+
+   1          #include <reg52.h>                
+   2          #include "i2c.h"
+   3          #include "delay.h"
+   4          #include "display.h"
+   5          
+   6          #define AddWr 0x90   //写数据地址 
+   7          #define AddRd 0x91   //读数据地址
+   8          unsigned char date;
+   9          extern bit ack;
+  10          bit WriteDAC(unsigned char dat);
+  11          static unsigned char num2=0;
+  12          unsigned char  irtime;//红外用全局变量
+  13          
+  14          
+  15          void tim0_isr (void) interrupt 1 using 1
+  16          {
+  17   1       //irtime++;  //用于计数2个下降沿之间的时间
+  18   1      }
+  19          
+  20          
+  21          
+  22          
+  23          void delay1ms()
+  24          {
+  25   1       unsigned int i;
+  26   1       for(i=10000;i>0;i--);  //延时124*8+10=1002us
+  27   1      }
+  28          Initial_com()
+  29          {
+  30   1       EA=1;        //开总中断
+  31   1       ES=1;        //允许串口中断
+  32   1       ET1=1;        //允许定时器T1的中断
+  33   1       TMOD=0x20;   //定时器T1，在方式2中断产生波特率
+  34   1       PCON=0x00;   //SMOD=0
+  35   1       SCON=0x50;   // 方式1 由定时器控制
+  36   1       TH1=0xfd;    //波特率设置为9600
+  37   1       TL1=0xfd;
+  38   1       TR1=1;       //开定时器T1运行控制位
+  39   1      
+  40   1      }
+  41          
+  42          //*****串口初始化函数***********
+  43          /*------------------------------------------------
+  44                          定时器0初始化
+  45          ------------------------------------------------*/
+  46          void TIM0init(void)//定时器0初始化
+  47          {
+  48   1      
+  49   1        TMOD=0x02;//定时器0工作方式2，TH0是重装值，TL0是初值
+  50   1      TH0=0x00;             //给定初值，这里使用定时器最大值从0开始计数一直到65535溢出
+  51   1       TL0=0x00;
+  52   1       ET0=1;           //定时器中断打开
+  53   1       TR0=1;           //定时器开关打开 
+  54   1      }
+C51 COMPILER V7.06   MAIN                                                                  09/12/2013 20:33:54 PAGE 2   
+
+  55          /*------------------------------------------------
+  56                            外部中断0初始化
+  57          ------------------------------------------------*/
+  58          void EX0init(void)
+  59          {
+  60   1       IT0 = 1;   //指定外部中断0下降沿触发，INT0 (P3.2)
+  61   1       EX0 = 1;   //使能外部中断
+  62   1       EA = 1;    //开总中断
+  63   1      }
+  64          
+  65          
+  66          
+  67          
+  68          main()
+  69          {
+  70   1      ////////////////////////////////////////////////
+  71   1        Init_Timer0();
+  72   1        Initial_com();
+  73   1      EX0init(); //初始化外部中断
+  74   1       TIM0init();//初始化定时器
+  75   1      //num2=100;
+  76   1      WriteDAC(num2);
+  77   1      ////////////////////////////////////////////////
+  78   1               Initial_com();
+  79   1               while(1)
+  80   1               {
+  81   2                       SBUF=0XAA;
+  82   2                       delay1ms();
+  83   2                       SBUF=0XBB;
+  84   2                       delay1ms();
+  85   2                        if(RI)
+  86   2                        {
+  87   3      
+  88   3                                 date=SBUF;    //单片机接受
+  89   3      if (date=='a')  { WriteDAC(30);}
+  90   3      if (date=='b')  {  WriteDAC(60); }
+  91   3      if (date=='c')  {  WriteDAC(90); }
+  92   3      if (date=='d')  {  WriteDAC(120); }
+  93   3      if (date=='e')  {  WriteDAC(150); }
+  94   3      if (date=='f')  {  WriteDAC(180); }
+  95   3      if (date=='g')  {  WriteDAC(210); }
+  96   3      if (date=='h')  {  WriteDAC(240); }
+  97   3      if (date=='i')  {  WriteDAC(255); }
+  98   3      if (date=='j')  {  WriteDAC(0); }
+  99   3       //delay1ms();
+ 100   3                                 SBUF=date;    //单片机发送
+ 101   3      delay1ms();
+ 102   3      
+ 103   3                                 RI=0;
+ 104   3                        }
+ 105   2                      
+ 106   2                       
+ 107   2                }
+ 108   1      }
+ 109          
+ 110          
+ 111          /*------------------------------------------------
+ 112                         写入DA转换数值
+ 113          输入参数：dat 表示需要转换的DA数值，范围是0-255
+ 114          ------------------------------------------------*/
+ 115          bit WriteDAC(unsigned char dat)
+ 116          {
+C51 COMPILER V7.06   MAIN                                                                  09/12/2013 20:33:54 PAGE 3   
+
+ 117   1         Start_I2c();               //启动总线
+ 118   1         SendByte(AddWr);             //发送器件地址
+ 119   1           if(ack==0)return(0);
+ 120   1         SendByte(0x40);            //发送器件子地址
+ 121   1           if(ack==0)return(0);
+ 122   1         SendByte(dat);             //发送数据
+ 123   1           if(ack==0)return(0);
+ 124   1         Stop_I2c();  
+ 125   1      }
+ 126          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    246    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      3       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

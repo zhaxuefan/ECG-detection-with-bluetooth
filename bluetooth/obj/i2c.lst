@@ -1,0 +1,118 @@
+C51 COMPILER V7.06   I2C                                                                   09/12/2013 20:33:54 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE I2C
+OBJECT MODULE PLACED IN .\obj\i2c.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE i2c.c BROWSE DEBUG OBJECTEXTEND PRINT(.\obj\i2c.lst) OBJECT(.\obj\i2c.obj)
+
+stmt level    source
+
+   1          #include "i2c.h"
+   2          #include "delay.h"
+   3          
+   4          #define  _Nop()  _nop_()  //定义空指令
+   5                                   
+   6          bit ack;                      //应答标志位
+   7          
+   8          sbit SDA=P2^1;
+   9          sbit SCL=P2^0;
+  10          
+  11          /*------------------------------------------------
+  12                              启动总线
+  13          ------------------------------------------------*/
+  14          void Start_I2c()
+  15          {
+  16   1        SDA=1;   //发送起始条件的数据信号
+  17   1        _Nop();
+  18   1        SCL=1;
+  19   1        _Nop();    //起始条件建立时间大于4.7us,延时
+  20   1        _Nop();
+  21   1        _Nop();
+  22   1        _Nop();
+  23   1        _Nop();    
+  24   1        SDA=0;     //发送起始信号
+  25   1        _Nop();    //起始条件锁定时间大于4μ
+  26   1        _Nop();
+  27   1        _Nop();
+  28   1        _Nop();
+  29   1        _Nop();       
+  30   1        SCL=0;    //钳住I2C总线，准备发送或接收数据
+  31   1        _Nop();
+  32   1        _Nop();
+  33   1      }
+  34          /*------------------------------------------------
+  35                              结束总线
+  36          ------------------------------------------------*/
+  37          void Stop_I2c()
+  38          {
+  39   1        SDA=0;    //发送结束条件的数据信号
+  40   1        _Nop();   //发送结束条件的时钟信号
+  41   1        SCL=1;    //结束条件建立时间大于4μ
+  42   1        _Nop();
+  43   1        _Nop();
+  44   1        _Nop();
+  45   1        _Nop();
+  46   1        _Nop();
+  47   1        SDA=1;    //发送I2C总线结束信号
+  48   1        _Nop();
+  49   1        _Nop();
+  50   1        _Nop();
+  51   1        _Nop();
+  52   1      }
+  53          /*----------------------------------------------------------------
+  54                           字节数据传送函数               
+  55          函数原型: void  SendByte(unsigned char c);
+C51 COMPILER V7.06   I2C                                                                   09/12/2013 20:33:54 PAGE 2   
+
+  56          功能:  将数据c发送出去,可以是地址,也可以是数据,发完后等待应答,并对
+  57               此状态位进行操作.(不应答或非应答都使ack=0 假)     
+  58               发送数据正常，ack=1; ack=0表示被控器无应答或损坏。
+  59          ------------------------------------------------------------------*/
+  60          void  SendByte(unsigned char c)
+  61          {
+  62   1       unsigned char BitCnt;
+  63   1       
+  64   1       for(BitCnt=0;BitCnt<8;BitCnt++)  //要传送的数据长度为8位
+  65   1          {
+  66   2           if((c<<BitCnt)&0x80)SDA=1;   //判断发送位
+  67   2             else  SDA=0;                
+  68   2           _Nop();
+  69   2           SCL=1;               //置时钟线为高，通知被控器开始接收数据位
+  70   2            _Nop(); 
+  71   2            _Nop();             //保证时钟高电平周期大于4μ
+  72   2            _Nop();
+  73   2            _Nop();
+  74   2            _Nop();         
+  75   2           SCL=0; 
+  76   2          }
+  77   1          
+  78   1          _Nop();
+  79   1          _Nop();
+  80   1          SDA=1;               //8位发送完后释放数据线，准备接收应答位
+  81   1          _Nop();
+  82   1          _Nop();   
+  83   1          SCL=1;
+  84   1          _Nop();
+  85   1          _Nop();
+  86   1          _Nop();
+  87   1          if(SDA==1)ack=0;     
+  88   1             else ack=1;        //判断是否接收到应答信号
+  89   1          SCL=0;
+  90   1          _Nop();
+  91   1          _Nop();
+  92   1      }
+  93          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     99    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
